@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 typedef Widget AutoCompleteOverlayItemBuilder<T>(
     BuildContext context, T suggestion);
 
+typedef String AutoCompleteItemStringifier<T>(T suggestion);
+
 typedef bool Filter<T>(T suggestion, String query);
 
 typedef InputEventCallback<T>(T data);
@@ -20,6 +22,7 @@ class AutoCompleteTextField<T> extends StatefulWidget {
   final ValueSetter<bool> onFocusChanged;
   final InputEventCallback<T> itemSubmitted;
   final AutoCompleteOverlayItemBuilder<T> itemBuilder;
+  final AutoCompleteItemStringifier<T> itemStringifier;
   final int suggestionsAmount;
   final GlobalKey<AutoCompleteTextFieldState<T>> key;
   final bool submitOnSuggestionTap, clearOnSubmit;
@@ -47,6 +50,7 @@ class AutoCompleteTextField<T> extends StatefulWidget {
           this.itemSorter, //Callback to sort items in the form (a of type <T>, b of type <T>)
       @required
           this.itemFilter, //Callback to filter item: return true or false depending on input text
+      this.itemStringifier, // Callback to turn an item into a String for display in the text field
       this.inputFormatters,
       this.style,
       this.decoration: const InputDecoration(),
@@ -101,6 +105,7 @@ class AutoCompleteTextField<T> extends StatefulWidget {
       itemBuilder,
       itemSorter,
       itemFilter,
+      itemStringifier,
       suggestionsAmount,
       submitOnSuggestionTap,
       clearOnSubmit,
@@ -124,6 +129,7 @@ class AutoCompleteTextFieldState<T> extends State<AutoCompleteTextField> {
   ValueSetter<bool> onFocusChanged;
   InputEventCallback<T> itemSubmitted;
   AutoCompleteOverlayItemBuilder<T> itemBuilder;
+  AutoCompleteItemStringifier<T> itemStringifier;
   Comparator<T> itemSorter;
   OverlayEntry listSuggestionsEntry;
   List<T> filteredSuggestions;
@@ -152,6 +158,7 @@ class AutoCompleteTextFieldState<T> extends State<AutoCompleteTextField> {
       this.itemBuilder,
       this.itemSorter,
       this.itemFilter,
+      this.itemStringifier,
       this.suggestionsAmount,
       this.submitOnSuggestionTap,
       this.clearOnSubmit,
@@ -321,7 +328,9 @@ class AutoCompleteTextFieldState<T> extends State<AutoCompleteTextField> {
                                   onTap: () {
                                     setState(() {
                                       if (submitOnSuggestionTap) {
-                                        String newText = suggestion.toString();
+                                        String newText = itemStringifier == null
+                                            ? suggestion.toString()
+                                            : itemStringifier(suggestion);
                                         textField.controller.text = newText;
                                         textField.focusNode.unfocus();
                                         itemSubmitted(suggestion);
@@ -329,7 +338,9 @@ class AutoCompleteTextFieldState<T> extends State<AutoCompleteTextField> {
                                           clear();
                                         }
                                       } else {
-                                        String newText = suggestion.toString();
+                                        String newText = itemStringifier == null
+                                            ? suggestion.toString()
+                                            : itemStringifier(suggestion);
                                         textField.controller.text = newText;
                                         textChanged(newText);
                                       }
@@ -437,6 +448,7 @@ class SimpleAutoCompleteTextField extends AutoCompleteTextField<String> {
       }, (item, query) {
         return item.toLowerCase().startsWith(query.toLowerCase());
       },
+          null,
           suggestionsAmount,
           submitOnSuggestionTap,
           clearOnSubmit,
